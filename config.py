@@ -4,10 +4,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Telegram Bot Token
-TOKEN = os.getenv('BOT_TOKEN')
+TOKEN = os.getenv('TELEGRAM_TOKEN')
+if not TOKEN:
+    raise ValueError("No TELEGRAM_TOKEN provided in environment variables!")
 
 # Database
-DB_FILE = 'tasks.db'
+DB_FILE = os.getenv('DB_FILE', 'tasks.db')
 
 # Reminder settings
 REMINDER_AHEAD_TIME = 3600  # 1 hour in seconds
