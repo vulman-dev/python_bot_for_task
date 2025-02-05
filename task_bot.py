@@ -55,12 +55,21 @@ class TelegramBot:
         self.db = Database(DB_FILE)
         self.user_states = {}
         self.setup_handlers()
-        
+
+    def get_main_keyboard(self):
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton("📝 Добавить задачу")
+        item2 = types.KeyboardButton("📋 Мои задачи")
+        item3 = types.KeyboardButton("✅ Завершенные задачи")
+        markup.add(item1, item2)
+        markup.add(item3)
+        return markup
+
     def setup_handlers(self):
         @self.bot.message_handler(commands=['start'])
         def send_welcome(message):
             self.bot.reply_to(message, 
-                            "Привет! Я бот-органайзер задач.",
+                            "Привет! Я бот-органайзер задач. Помогу тебе управлять твоими делами.",
                             reply_markup=self.get_main_keyboard())
 
         @self.bot.message_handler(func=lambda message: message.text == "📝 Добавить задачу")
@@ -69,12 +78,36 @@ class TelegramBot:
             self.user_states[message.from_user.id] = {'state': 'waiting_task_text'}
             self.bot.register_next_step_handler(msg, self.process_task_text)
 
-    def get_main_keyboard(self):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        item1 = types.KeyboardButton("📝 Добавить задачу")
-        item2 = types.KeyboardButton("📋 Мои задачи")
-        markup.add(item1, item2)
-        return markup
+        @self.bot.message_handler(func=lambda message: message.text == "📋 Мои задачи")
+        def show_tasks(message):
+            tasks = self.db.get_tasks(message.from_user.id)
+            if tasks:
+                response = "Ваши активные задачи:\n\n"
+                for task in tasks:
+                    task_id, text, category, deadline, priority = task
+                    response += f"🔹 {text}\n"
+                    response += f"Категория: {category}\n"
+                    response += f"Приоритет: {priority}\n"
+                    response += f"Дедлайн: {deadline}\n\n"
+            else:
+                response = "У вас пока нет активных задач."
+            
+            self.bot.send_message(message.chat.id, response)
+
+        @self.bot.message_handler(func=lambda message: message.text == "✅ Завершенные задачи")
+        def show_completed_tasks(message):
+            tasks = self.db.get_tasks(message.from_user.id, 'completed')
+            if tasks:
+                response = "Ваши завершенные задачи:\n\n"
+                for task in tasks:
+                    task_id, text, category, deadline, priority = task
+                    response += f"✅ {text}\n"
+                    response += f"Категория: {category}\n"
+                    response += f"Выполнено: {deadline}\n\n"
+            else:
+                response = "У вас пока нет завершенных задач."
+            
+            self.bot.send_message(message.chat.id, response)
 
     def process_task_text(self, message):
         user_id = message.from_user.id
@@ -90,6 +123,52 @@ class TelegramBot:
         
         msg = self.bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=markup)
         self.bot.register_next_step_handler(msg, self.process_category)
+
+    def process_category(self, message):
+        user_id = message.from_user.id
+        self.user_states[user_id]['category'] = message.text
+        
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        priorities = ["1 - Высокий", "2 - Средний", "3 - Низкий"]
+        for priority in priorities:
+            markup.add(types.KeyboardButton(priority))
+        
+        msg = self.bot.send_message(message.chat.id, "Выберите приоритет:", reply_markup=markup)
+        self.bot.register_next_step_handler(msg, self.process_priority)
+
+    def process_priority(self, message):
+        user_id = message.from_user.id
+        priority = int(message.text[0])
+        self.user_states[user_id]['priority'] = priority
+        
+        msg = self.bot.send_message(message.chat.id, 
+                                  "Введите дедлайн в формате ДД.ММ.ГГГГ ЧЧ:ММ\n"
+                                  "Например: 31.12.2024 15:00")
+        self.bot.register_next_step_handler(msg, self.process_deadline)
+
+    def process_deadline(self, message):
+        user_id = message.from_user.id
+        try:
+            deadline = datetime.datetime.strptime(message.text, "%d.%m.%Y %H:%M")
+            state = self.user_states[user_id]
+            
+            self.db.add_task(
+                user_id=user_id,
+                task_text=state['task_text'],
+                category=state['category'],
+                deadline=deadline.strftime("%Y-%m-%d %H:%M:00"),
+                priority=state['priority']
+            )
+            
+            self.bot.send_message(message.chat.id, 
+                                "Задача успешно добавлена!",
+                                reply_markup=self.get_main_keyboard())
+            
+        except ValueError:
+            msg = self.bot.send_message(message.chat.id, 
+                                      "Неверный формат даты. Попробуйте еще раз.\n"
+                                      "Формат: ДД.ММ.ГГГГ ЧЧ:ММ")
+            self.bot.register_next_step_handler(msg, self.process_deadline)
 
     def check_reminders_loop(self):
         while True:
