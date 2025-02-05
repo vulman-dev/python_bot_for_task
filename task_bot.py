@@ -8,6 +8,8 @@ import sqlite3
 import threading
 import time
 import schedule
+import atexit
+import signal
 
 # Настройка логирования
 logging.basicConfig(
@@ -16,9 +18,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Инициализация бота
-TOKEN = os.getenv('TELEGRAM_TOKEN')
-bot = telebot.TeleBot(TOKEN)
+class SingletonBot:
+    _instance = None
+    
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            TOKEN = os.getenv('TELEGRAM_TOKEN')
+            if not TOKEN:
+                raise ValueError("No token provided")
+            cls._instance = telebot.TeleBot(TOKEN)
+        return cls._instance
+
+# Инициализация бота через синглтон
+bot = SingletonBot.get_instance()
+
+# Обработчик выхода
+def cleanup():
+    logger.info("Cleaning up...")
+    try:
+        bot.stop_polling()
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
+
+# Обработчик сигналов
+def signal_handler(signum, frame):
+    logger.info(f"Received signal {signum}")
+    cleanup()
+    sys.exit(0)
+
+# Регистрация обработчиков
+atexit.register(cleanup)
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 # Создание базы данных
 def init_db():
@@ -280,12 +312,6 @@ def check_reminders():
             logger.error(f"Error in check_reminders: {e}")
             time.sleep(60)  # При ошибке ждем минуту перед повторной попыткой
 
-# Добавьте эту функцию для безопасного выхода
-def safe_exit(signum, frame):
-    logger.info("Received signal for shutdown...")
-    bot.stop_polling()
-    sys.exit(0)
-
 if __name__ == "__main__":
     try:
         logger.info("Starting bot...")
@@ -298,7 +324,8 @@ if __name__ == "__main__":
         
         logger.info("Bot is running...")
         # Изменяем параметры polling
-        bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
+        bot.polling(none_stop=True, timeout=123, long_polling_timeout=60)
     except Exception as e:
         logger.error(f"Error occurred: {e}")
+        cleanup()
         sys.exit(1)

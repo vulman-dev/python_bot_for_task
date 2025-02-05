@@ -20,6 +20,8 @@ RUN chown -R botuser:botuser /app
 # Переключаемся на пользователя botuser
 USER botuser
 
-# Используем ENTRYPOINT для правильной обработки сигналов
-ENTRYPOINT ["python"]
-CMD ["task_bot.py"]
+# Добавляем STOPSIGNAL
+STOPSIGNAL SIGTERM
+
+# Запускаем бота
+CMD ["python", "task_bot.py"]
