@@ -1,6 +1,4 @@
 __pycache__/
 *.pyc
+*.db
 .env
-tasks.db
-bot.lock
-bot.log

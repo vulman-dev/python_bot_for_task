@@ -1,0 +1,196 @@
+2025-02-06 01:36:50,671 - __main__ - INFO - Starting bot...
+2025-02-06 01:36:50,672 - __main__ - INFO - Bot is running...
+2025-02-06 01:50:00,387 - __main__ - ERROR - Error creating lock file: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+2025-02-06 01:51:41,342 - __main__ - INFO - Starting bot...
+2025-02-06 01:51:41,342 - __main__ - INFO - Bot is running...
+2025-02-06 02:06:37,437 - __main__ - INFO - Starting bot...
+2025-02-06 02:06:37,438 - __main__ - INFO - Bot is running...
+2025-02-06 02:07:55,080 - TeleBot - ERROR - Threaded polling exception: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: message text is empty
+2025-02-06 02:07:55,083 - TeleBot - ERROR - Exception traceback:
+Traceback (most recent call last):
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 93, in run
+    task(*args, **kwargs)
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 9233, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\My Coding\task_bot.py", line 121, in show_tasks
+    self.bot.send_message(
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1800, in send_message
+    apihelper.send_message(
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\apihelper.py", line 275, in send_message
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\apihelper.py", line 195, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: message text is empty
+
+2025-02-06 02:08:24,822 - TeleBot - ERROR - Threaded polling exception: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: message text is empty
+2025-02-06 02:08:24,823 - TeleBot - ERROR - Exception traceback:
+Traceback (most recent call last):
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 93, in run
+    task(*args, **kwargs)
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 9233, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\My Coding\task_bot.py", line 121, in show_tasks
+    self.bot.send_message(
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1800, in send_message
+    apihelper.send_message(
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\apihelper.py", line 275, in send_message
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\apihelper.py", line 195, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: message text is empty
+
+2025-02-06 02:09:00,973 - TeleBot - ERROR - Infinity polling exception: 'Database' object has no attribute 'get_task_by_id'
+2025-02-06 02:09:00,975 - TeleBot - ERROR - Exception traceback:
+Traceback (most recent call last):
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 93, in run
+    task(*args, **kwargs)
+  File "c:\My Coding\task_bot.py", line 314, in process_reminder_time
+    task = self.db.get_task_by_id(task_id, user_id)
+           ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Database' object has no attribute 'get_task_by_id'
+
+2025-02-06 02:14:13,920 - __main__ - INFO - Starting bot...
+2025-02-06 02:14:13,921 - __main__ - INFO - Bot is running...
+2025-02-06 02:14:26,367 - TeleBot - ERROR - Infinity polling exception: invalid literal for int() with base 10: 'text'
+2025-02-06 02:14:26,368 - TeleBot - ERROR - Exception traceback:
+Traceback (most recent call last):
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 93, in run
+    task(*args, **kwargs)
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 9233, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\My Coding\task_bot.py", line 255, in edit_task_callback
+    task_id = int(call.data.split('_')[1])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: 'text'
+
+2025-02-06 02:15:14,415 - TeleBot - ERROR - Infinity polling exception: cannot access local variable 'response' where it is not associated with a value
+2025-02-06 02:15:14,419 - TeleBot - ERROR - Exception traceback:
+Traceback (most recent call last):
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 93, in run
+    task(*args, **kwargs)
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 9233, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\My Coding\task_bot.py", line 134, in complete_task_callback
+    show_tasks(call.message)
+  File "c:\My Coding\task_bot.py", line 120, in show_tasks
+    response,
+    ^^^^^^^^
+UnboundLocalError: cannot access local variable 'response' where it is not associated with a value
+
+2025-02-06 02:33:44,279 - __main__ - INFO - Starting bot...
+2025-02-06 02:33:44,280 - __main__ - INFO - Bot is running...
+2025-02-06 02:34:13,174 - TeleBot - ERROR - Infinity polling exception: 'TelegramBot' object has no attribute 'process_edit_text'
+2025-02-06 02:34:13,177 - TeleBot - ERROR - Exception traceback:
+Traceback (most recent call last):
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 93, in run
+    task(*args, **kwargs)
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 9233, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\My Coding\task_bot.py", line 283, in edit_task_callback
+    self.bot.register_next_step_handler(msg, self.process_edit_text)
+                                             ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'TelegramBot' object has no attribute 'process_edit_text'. Did you mean: 'process_task_text'?
+
+2025-02-06 02:35:31,858 - __main__ - INFO - Starting bot...
+2025-02-06 02:35:31,859 - __main__ - INFO - Bot is running...
+2025-02-06 02:41:21,304 - __main__ - INFO - Starting bot...
+2025-02-06 02:41:21,305 - __main__ - INFO - Bot is running...
+2025-02-06 02:41:29,777 - TeleBot - ERROR - Infinity polling exception: invalid literal for int() with base 10: 'text'
+2025-02-06 02:41:29,780 - TeleBot - ERROR - Exception traceback:
+Traceback (most recent call last):
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\util.py", line 93, in run
+    task(*args, **kwargs)
+  File "C:\Users\ezakh\AppData\Roaming\Python\Python312\site-packages\telebot\__init__.py", line 9233, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\My Coding\task_bot.py", line 96, in edit_task_callback
+    task_id = int(call.data.split('_')[1])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: 'text'
+
+2025-02-06 02:42:55,559 - __main__ - INFO - Starting bot...
+2025-02-06 02:42:55,560 - __main__ - INFO - Bot is running...
+2025-02-06 02:48:02,463 - __main__ - INFO - Starting bot...
+2025-02-06 02:48:02,464 - __main__ - INFO - Bot is running...
+2025-02-06 02:52:25,569 - __main__ - INFO - Starting bot...
+2025-02-06 02:54:04,666 - __main__ - INFO - Starting bot...
+2025-02-06 02:54:04,667 - __main__ - INFO - Bot is running...
+2025-02-06 02:54:04,667 - database - ERROR - Database error: no such column: reminder_sent
+2025-02-06 02:54:04,667 - __main__ - ERROR - Error in reminder check: no such column: reminder_sent
+2025-02-06 02:55:04,669 - database - ERROR - Database error: no such table: tasks
+2025-02-06 02:55:04,669 - __main__ - ERROR - Error in reminder check: no such table: tasks
+2025-02-06 02:55:12,899 - __main__ - INFO - Starting bot...
+2025-02-06 02:55:12,905 - __main__ - INFO - Bot is running...
+2025-02-06 02:59:20,485 - __main__ - INFO - Starting bot...
+2025-02-06 02:59:20,487 - __main__ - INFO - Bot is running...

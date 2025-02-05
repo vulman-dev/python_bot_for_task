@@ -1,8 +1,10 @@
 FROM python:3.9-slim
 
 WORKDIR /app
-COPY . .
 
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "-u", "task_bot.py"]
+COPY . .
+
+CMD ["python", "task_bot.py"]
