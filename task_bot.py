@@ -218,7 +218,8 @@ class TelegramBot:
                 logger.info("Bot is running...")
                 self.bot.infinity_polling(
                     interval=1,
-                    restart_on_change=True
+                    restart_on_change=True,
+                    timeout=20
                 )
                 
             except Exception as e:
