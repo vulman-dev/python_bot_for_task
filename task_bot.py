@@ -57,14 +57,63 @@ class TelegramBot:
         self.setup_handlers()
         
     def setup_handlers(self):
-        # Добавьте все ваши обработчики здесь
         @self.bot.message_handler(commands=['start'])
         def send_welcome(message):
             self.bot.reply_to(message, 
                             "Привет! Я бот-органайзер задач.",
                             reply_markup=self.get_main_keyboard())
 
-        # ... [все остальные обработчики из предыдущего кода] ...
+        @self.bot.message_handler(func=lambda message: message.text == "📝 Добавить задачу")
+        def add_task(message):
+            msg = self.bot.send_message(message.chat.id, "Введите текст задачи:")
+            self.user_states[message.from_user.id] = {'state': 'waiting_task_text'}
+            self.bot.register_next_step_handler(msg, self.process_task_text)
+
+    def get_main_keyboard(self):
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton("📝 Добавить задачу")
+        item2 = types.KeyboardButton("📋 Мои задачи")
+        markup.add(item1, item2)
+        return markup
+
+    def process_task_text(self, message):
+        user_id = message.from_user.id
+        self.user_states[user_id] = {
+            'state': 'waiting_category',
+            'task_text': message.text
+        }
+        
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        categories = ["Работа", "Личное", "Покупки", "Учёба", "Другое"]
+        for category in categories:
+            markup.add(types.KeyboardButton(category))
+        
+        msg = self.bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=markup)
+        self.bot.register_next_step_handler(msg, self.process_category)
+
+    def check_reminders_loop(self):
+        while True:
+            try:
+                now = datetime.datetime.now()
+                ahead_time = now + datetime.timedelta(seconds=REMINDER_AHEAD_TIME)
+                
+                reminders = self.db.get_upcoming_reminders(
+                    now.strftime("%Y-%m-%d %H:%M:00"),
+                    ahead_time.strftime("%Y-%m-%d %H:%M:00")
+                )
+                
+                for reminder in reminders:
+                    user_id, task_text, deadline = reminder
+                    self.bot.send_message(
+                        user_id,
+                        f"⚠️ Напоминание!\nЧерез час дедлайн задачи:\n{task_text}\n"
+                        f"Дедлайн: {deadline}"
+                    )
+                
+                time.sleep(REMINDER_CHECK_INTERVAL)
+            except Exception as e:
+                logger.error(f"Error in check_reminders: {e}")
+                time.sleep(60)
 
     def run(self):
         retry_count = 0
@@ -74,7 +123,7 @@ class TelegramBot:
                 self.db.init_db()
                 
                 # Запускаем проверку напоминаний
-                reminder_thread = threading.Thread(target=self.check_reminders)
+                reminder_thread = threading.Thread(target=self.check_reminders_loop)
                 reminder_thread.daemon = True
                 reminder_thread.start()
                 

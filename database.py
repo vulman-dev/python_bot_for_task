@@ -34,3 +34,13 @@ class Database:
                          status TEXT DEFAULT 'active',
                          reminder_time TEXT)''')
             conn.commit()
+
+    def get_upcoming_reminders(self, current_time, ahead_time):
+        with self.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("""SELECT user_id, task_text, deadline 
+                        FROM tasks 
+                        WHERE status='active' 
+                        AND deadline BETWEEN ? AND ?""",
+                     (current_time, ahead_time))
+            return c.fetchall()
