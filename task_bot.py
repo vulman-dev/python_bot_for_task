@@ -54,7 +54,7 @@ class TelegramBot:
         self.bot = telebot.TeleBot(
             TOKEN,
             threaded=False,
-            parse_mode=None
+            parse_mode='HTML'
         )
         self.db = Database(DB_FILE)
         self.user_states = {}
@@ -85,18 +85,25 @@ class TelegramBot:
         @self.bot.message_handler(func=lambda message: message.text == "📋 Мои задачи")
         def show_tasks(message):
             tasks = self.db.get_tasks(message.from_user.id)
+
             if tasks:
-                response = "Ваши активные задачи:\n\n"
+                response = "<b>📋 Ваши активные задачи:</b>\n\n"
                 for task in tasks:
                     task_id, text, category, deadline, priority = task
-                    response += f"🔹 {text}\n"
-                    response += f"Категория: {category}\n"
-                    response += f"Приоритет: {priority}\n"
-                    response += f"Дедлайн: {deadline}\n\n"
-            else:
-                response = "У вас пока нет активных задач."
-            
-            self.bot.send_message(message.chat.id, response)
+                    response += f"<b>🔹 Задача:</b> {text}\n"
+                    response += f"<b>📁 Категория:</b> {category}\n"
+                    response += f"<b>⚡️ Приоритет:</b> {priority}\n"
+                    response += f"<b>⏰ Дедлайн:</b> {deadline}\n"
+                    response += "─────────────────\n"
+                else:
+                    response = "У вас пока нет активных задач."
+
+                self.bot.send_message(
+                    message.chat.id,
+                    response,
+                    parse_mode='HTML',
+                    reply_markup=self.get_main_keyboard()
+                )
 
         @self.bot.message_handler(func=lambda message: message.text == "✅ Завершенные задачи")
         def show_completed_tasks(message):
