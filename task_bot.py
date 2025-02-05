@@ -1,4 +1,7 @@
 import telebot
+import logging
+import os
+import sys
 from telebot import types
 import datetime
 import sqlite3
@@ -6,8 +9,15 @@ import threading
 import time
 import schedule
 
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Инициализация бота
-TOKEN = '7651311499:AAFTARWcEJkTJE8RohfjHKlouoFtJc6VzYs'
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 bot = telebot.TeleBot(TOKEN)
 
 # Создание базы данных
@@ -85,7 +95,7 @@ def process_category(message):
 
 def process_priority(message):
     user_id = message.from_user.id
-    priority = int(message.text[0])  # Получаем число из начала строки
+    priority = int(message.text[0])
     user_states[user_id]['priority'] = priority
     user_states[user_id]['state'] = 'waiting_deadline'
     
@@ -100,7 +110,6 @@ def process_deadline(message):
         deadline = datetime.datetime.strptime(message.text, "%d.%m.%Y %H:%M")
         user_states[user_id]['deadline'] = deadline.strftime("%Y-%m-%d %H:%M:00")
         
-        # Сохранение задачи в БД
         conn = sqlite3.connect('tasks.db')
         c = conn.cursor()
         c.execute("""INSERT INTO tasks 
@@ -148,7 +157,6 @@ def show_tasks(message):
             response += f"Приоритет: {'❗' * (4 - priority)}\n"
             response += f"Дедлайн: {deadline_dt.strftime('%d.%m.%Y %H:%M')}\n"
             
-            # Кнопки для каждой задачи
             complete_btn = types.InlineKeyboardButton(
                 "✅ Выполнено", 
                 callback_data=f"complete_{task_id}"
@@ -168,6 +176,32 @@ def show_tasks(message):
         markup = None
     
     bot.send_message(message.chat.id, response, reply_markup=markup)
+
+# Просмотр завершенных задач
+@bot.message_handler(func=lambda message: message.text == "✅ Завершенные задачи")
+def show_completed_tasks(message):
+    user_id = message.from_user.id
+    conn = sqlite3.connect('tasks.db')
+    c = conn.cursor()
+    c.execute("""SELECT task_text, category, deadline 
+                 FROM tasks 
+                 WHERE user_id=? AND status='completed'
+                 ORDER BY deadline DESC""", (user_id,))
+    tasks = c.fetchall()
+    conn.close()
+    
+    if tasks:
+        response = "Ваши завершенные задачи:\n\n"
+        for task in tasks:
+            text, category, deadline = task
+            deadline_dt = datetime.datetime.strptime(deadline, "%Y-%m-%d %H:%M:00")
+            response += f"✅ {text}\n"
+            response += f"Категория: {category}\n"
+            response += f"Выполнено: {deadline_dt.strftime('%d.%m.%Y %H:%M')}\n\n"
+    else:
+        response = "У вас пока нет завершенных задач."
+    
+    bot.send_message(message.chat.id, response)
 
 # Обработка нажатий на инлайн-кнопки
 @bot.callback_query_handler(func=lambda call: True)
@@ -215,64 +249,56 @@ def process_edit_task(message):
                     "Задача обновлена!",
                     reply_markup=get_main_keyboard())
 
-# Просмотр по категориям
-@bot.message_handler(func=lambda message: message.text == "📊 Категории")
-def show_categories(message):
-    user_id = message.from_user.id
-    conn = sqlite3.connect('tasks.db')
-    c = conn.cursor()
-    c.execute("""SELECT DISTINCT category 
-                 FROM tasks 
-                 WHERE user_id=? AND status='active'""", (user_id,))
-    categories = c.fetchall()
-    
-    markup = types.InlineKeyboardMarkup()
-    for category in categories:
-        btn = types.InlineKeyboardButton(
-            category[0], 
-            callback_data=f"category_{category[0]}"
-        )
-        markup.add(btn)
-    
-    bot.send_message(message.chat.id, 
-                    "Выберите категорию для просмотра задач:",
-                    reply_markup=markup)
-
 # Функция для проверки и отправки напоминаний
 def check_reminders():
     while True:
-        conn = sqlite3.connect('tasks.db')
-        c = conn.cursor()
-        now = datetime.datetime.now()
-        
-        # Получаем задачи, дедлайн которых наступает через час
-        c.execute("""SELECT user_id, task_text, deadline 
-                    FROM tasks 
-                    WHERE status='active' 
-                    AND deadline BETWEEN ? AND ?""",
-                 (now.strftime("%Y-%m-%d %H:%M:00"),
-                  (now + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:00")))
-        
-        tasks = c.fetchall()
-        for task in tasks:
-            user_id, task_text, deadline = task
-            bot.send_message(
-                user_id,
-                f"⚠️ Напоминание!\nЧерез час дедлайн задачи:\n{task_text}\n"
-                f"Дедлайн: {deadline}"
-            )
-        
-        conn.close()
-        time.sleep(300)  # Проверяем каждые 5 минут
+        try:
+            conn = sqlite3.connect('tasks.db')
+            c = conn.cursor()
+            now = datetime.datetime.now()
+            
+            # Получаем задачи, дедлайн которых наступает через час
+            c.execute("""SELECT user_id, task_text, deadline 
+                        FROM tasks 
+                        WHERE status='active' 
+                        AND deadline BETWEEN ? AND ?""",
+                     (now.strftime("%Y-%m-%d %H:%M:00"),
+                      (now + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:00")))
+            
+            tasks = c.fetchall()
+            for task in tasks:
+                user_id, task_text, deadline = task
+                bot.send_message(
+                    user_id,
+                    f"⚠️ Напоминание!\nЧерез час дедлайн задачи:\n{task_text}\n"
+                    f"Дедлайн: {deadline}"
+                )
+            
+            conn.close()
+            time.sleep(300)  # Проверяем каждые 5 минут
+        except Exception as e:
+            logger.error(f"Error in check_reminders: {e}")
+            time.sleep(60)  # При ошибке ждем минуту перед повторной попыткой
 
-# Запуск бота
+# Добавьте эту функцию для безопасного выхода
+def safe_exit(signum, frame):
+    logger.info("Received signal for shutdown...")
+    bot.stop_polling()
+    sys.exit(0)
+
 if __name__ == "__main__":
-    init_db()
-    
-    # Запускаем проверку напоминаний в отдельном потоке
-    reminder_thread = threading.Thread(target=check_reminders)
-    reminder_thread.daemon = True
-    reminder_thread.start()
-    
-    # Запускаем бота
-    bot.polling(none_stop=True)
+    try:
+        logger.info("Starting bot...")
+        init_db()
+        
+        # Запускаем проверку напоминаний в отдельном потоке
+        reminder_thread = threading.Thread(target=check_reminders)
+        reminder_thread.daemon = True
+        reminder_thread.start()
+        
+        logger.info("Bot is running...")
+        # Изменяем параметры polling
+        bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
+    except Exception as e:
+        logger.error(f"Error occurred: {e}")
+        sys.exit(1)

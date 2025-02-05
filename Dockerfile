@@ -20,5 +20,6 @@ RUN chown -R botuser:botuser /app
 # Переключаемся на пользователя botuser
 USER botuser
 
-# Запускаем бота
-CMD ["python", "task_bot.py"]
+# Используем ENTRYPOINT для правильной обработки сигналов
+ENTRYPOINT ["python"]
+CMD ["task_bot.py"]
