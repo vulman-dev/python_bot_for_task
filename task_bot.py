@@ -58,23 +58,37 @@ class TelegramBot:
         )
         self.db = Database(DB_FILE)
         self.user_states = {}
+        self.last_message_ids = {}
         self.setup_handlers()
 
     def get_main_keyboard(self):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        item1 = types.KeyboardButton("📝 Добавить задачу")
-        item2 = types.KeyboardButton("📋 Мои задачи")
-        item3 = types.KeyboardButton("✅ Завершенные задачи")
-        markup.add(item1, item2)
-        markup.add(item3)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+        buttons = [
+            types.KeyboardButton("📝 Добавить задачу"),
+            types.KeyboardButton("📋 Мои задачи"),
+            types.KeyboardButton("✅ Завершенные задачи")
+        ]
+        markup.add(*buttons)
         return markup
 
     def setup_handlers(self):
         @self.bot.message_handler(commands=['start'])
         def send_welcome(message):
-            self.bot.reply_to(message, 
-                            "Привет! Я бот-органайзер задач. Помогу тебе управлять твоими делами.",
-                            reply_markup=self.get_main_keyboard())
+            keyboard = self.get_main_keyboard()
+            self.bot.send_message(
+                message.chat.id,
+                "Привет! Я бот-органайзер задач. Помогу тебе управлять твоими делами.",
+                reply_markup=keyboard
+            )
+
+        @self.bot.message_handler(commands=['menu'])
+        def show_menu(message):
+            keyboard = self.get_main_keyboard()
+            self.bot.send_message(
+                message.chat.id,
+                "Вот главное меню:",
+                reply_markup=keyboard
+            )
 
         @self.bot.message_handler(func=lambda message: message.text == "📝 Добавить задачу")
         def add_task(message):
@@ -84,8 +98,16 @@ class TelegramBot:
 
         @self.bot.message_handler(func=lambda message: message.text == "📋 Мои задачи")
         def show_tasks(message):
+            chat_id = message.chat.id
+            
+            # Удаляем предыдущее сообщение, если оно существует
+            if chat_id in self.last_message_ids:
+                try:
+                    self.bot.delete_message(chat_id, self.last_message_ids[chat_id])
+                except Exception as e:
+                    logger.error(f"Error deleting message: {e}")
+            
             tasks = self.db.get_tasks(message.from_user.id)
-
             if tasks:
                 response = "<b>📋 Ваши активные задачи:</b>\n\n"
                 for task in tasks:
@@ -95,30 +117,38 @@ class TelegramBot:
                     response += f"<b>⚡️ Приоритет:</b> {priority}\n"
                     response += f"<b>⏰ Дедлайн:</b> {deadline}\n"
                     response += "─────────────────\n"
-                else:
-                    response = "У вас пока нет активных задач."
-
-                self.bot.send_message(
-                    message.chat.id,
-                    response,
-                    parse_mode='HTML',
-                    reply_markup=self.get_main_keyboard()
-                )
+            else:
+                response = "У вас пока нет активных задач."
+            
+            # Отправляем новое сообщение и сохраняем его ID
+            sent_message = self.bot.send_message(
+                chat_id,
+                response,
+                parse_mode='HTML',
+                reply_markup=self.get_main_keyboard()
+            )
+            self.last_message_ids[chat_id] = sent_message.message_id
 
         @self.bot.message_handler(func=lambda message: message.text == "✅ Завершенные задачи")
         def show_completed_tasks(message):
             tasks = self.db.get_tasks(message.from_user.id, 'completed')
             if tasks:
-                response = "Ваши завершенные задачи:\n\n"
+                response = "<b>✅ Завершенные задачи:</b>\n\n"
                 for task in tasks:
                     task_id, text, category, deadline, priority = task
-                    response += f"✅ {text}\n"
-                    response += f"Категория: {category}\n"
-                    response += f"Выполнено: {deadline}\n\n"
+                    response += f"<b>✓ Задача:</b> {text}\n"
+                    response += f"<b>📁 Категория:</b> {category}\n"
+                    response += f"<b>📅 Выполнено:</b> {deadline}\n"
+                    response += "─────────────────\n"
             else:
                 response = "У вас пока нет завершенных задач."
             
-            self.bot.send_message(message.chat.id, response)
+            self.bot.send_message(
+                message.chat.id,
+                response,
+                parse_mode='HTML',
+                reply_markup=self.get_main_keyboard()
+            )
 
     def process_task_text(self, message):
         user_id = message.from_user.id
@@ -216,17 +246,19 @@ class TelegramBot:
                 try:
                     self.bot.remove_webhook()
                     time.sleep(1)
-                    self.bot.delete_webhook()
-                    time.sleep(1)
-                    self.bot.get_updates(offset=-1, timeout=1)
+                    updates = self.bot.get_updates(offset=-1)
+                    if updates:
+                        last_update_id = updates[-1].update_id
+                        self.bot.get_updates(offset=last_update_id + 1)
                 except Exception as e:
                     logger.warning(f"Error during webhook cleanup: {e}")
                 
                 logger.info("Bot is running...")
                 self.bot.infinity_polling(
-                    interval=1,
-                    restart_on_change=True,
-                    timeout=20
+                    interval=3,
+                    timeout=20,
+                    long_polling_timeout=20,
+                    restart_on_error=True
                 )
                 
             except Exception as e:
