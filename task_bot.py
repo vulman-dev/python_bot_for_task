@@ -54,8 +54,7 @@ class TelegramBot:
         self.bot = telebot.TeleBot(
             TOKEN,
             threaded=False,
-            parse_mode=None,
-            timeout=REQUEST_TIMEOUT
+            parse_mode=None
         )
         self.db = Database(DB_FILE)
         self.user_states = {}
@@ -218,9 +217,8 @@ class TelegramBot:
                 
                 logger.info("Bot is running...")
                 self.bot.infinity_polling(
-                    timeout=POLLING_TIMEOUT,
-                    long_polling_timeout=LONG_POLLING_TIMEOUT,
-                    restart_on_error=True
+                    interval=1,
+                    restart_on_change=True
                 )
                 
             except Exception as e:
