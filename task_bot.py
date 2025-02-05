@@ -257,8 +257,7 @@ class TelegramBot:
                 self.bot.infinity_polling(
                     interval=3,
                     timeout=20,
-                    long_polling_timeout=20,
-                    restart_on_error=True
+                    long_polling_timeout=20
                 )
                 
             except Exception as e:
