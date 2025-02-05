@@ -34,7 +34,7 @@ class Database:
                          status TEXT DEFAULT 'active',
                          reminder_time TEXT)''')
             conn.commit()
-            
+
     def add_task(self, user_id, task_text, category, deadline, priority):
         with self.get_connection() as conn:
             c = conn.cursor()
@@ -43,6 +43,16 @@ class Database:
                         VALUES (?, ?, ?, ?, ?, 'active')""",
                      (user_id, task_text, category, deadline, priority))
             conn.commit()
+
+    def get_tasks(self, user_id, status='active'):
+        with self.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("""SELECT id, task_text, category, deadline, priority 
+                        FROM tasks 
+                        WHERE user_id=? AND status=?
+                        ORDER BY priority DESC, deadline ASC""",
+                     (user_id, status))
+            return c.fetchall()
 
     def get_upcoming_reminders(self, current_time, ahead_time):
         with self.get_connection() as conn:
@@ -53,3 +63,13 @@ class Database:
                         AND deadline BETWEEN ? AND ?""",
                      (current_time, ahead_time))
             return c.fetchall()
+        
+    def complete_task(self, task_id, user_id):
+        with self.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("""UPDATE tasks 
+                        SET status='completed' 
+                        WHERE id=? AND user_id=?""",
+                     (task_id, user_id))
+            conn.commit()
+            return c.rowcount > 0
