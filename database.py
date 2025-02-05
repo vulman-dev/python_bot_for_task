@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import datetime
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
@@ -63,13 +64,16 @@ class Database:
                         AND deadline BETWEEN ? AND ?""",
                      (current_time, ahead_time))
             return c.fetchall()
-        
+
     def complete_task(self, task_id, user_id):
+        """Отмечает задачу как выполненную"""
         with self.get_connection() as conn:
             c = conn.cursor()
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:00")
             c.execute("""UPDATE tasks 
-                        SET status='completed' 
-                        WHERE id=? AND user_id=?""",
-                     (task_id, user_id))
+                        SET status = 'completed', 
+                            deadline = ? 
+                        WHERE id = ? AND user_id = ? AND status = 'active'""",
+                     (current_time, task_id, user_id))
             conn.commit()
             return c.rowcount > 0

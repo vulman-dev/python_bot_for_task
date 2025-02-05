@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+tasks.db
+bot.lock
+bot.log

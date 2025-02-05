@@ -1,172 +1,227 @@
-import sqlite3
+import telebot
 import logging
+import sys
+from telebot import types
 import datetime
-from contextlib import contextmanager
+import time
+import os
+import fcntl
+from config import *
+from database import Database
 
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('bot.log')
+    ]
+)
 logger = logging.getLogger(__name__)
 
-class Database:
-    def __init__(self, db_file):
-        self.db_file = db_file
+# ... (предыдущий код с импортами и настройкой логирования)
 
-    @contextmanager
-    def get_connection(self):
-        conn = None
-        try:
-            conn = sqlite3.connect(self.db_file)
-            yield conn
-        except Exception as e:
-            logger.error(f"Database error: {e}")
-            raise
-        finally:
-            if conn:
-                conn.close()
-
-    def init_db(self):
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute('''CREATE TABLE IF NOT EXISTS tasks
-                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                         user_id INTEGER, 
-                         task_text TEXT,
-                         category TEXT,
-                         deadline TEXT,
-                         priority INTEGER,
-                         status TEXT DEFAULT 'active',
-                         reminder_time TEXT)''')
-            conn.commit()
-
-    def add_task(self, user_id, task_text, category, deadline, priority):
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""INSERT INTO tasks 
-                        (user_id, task_text, category, deadline, priority, status) 
-                        VALUES (?, ?, ?, ?, ?, 'active')""",
-                     (user_id, task_text, category, deadline, priority))
-            conn.commit()
-
-    def get_tasks(self, user_id, status='active'):
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT id, task_text, category, deadline, priority 
-                        FROM tasks 
-                        WHERE user_id=? AND status=?
-                        ORDER BY priority DESC, deadline ASC""",
-                     (user_id, status))
-            return c.fetchall()
-
-    def get_upcoming_reminders(self, current_time, ahead_time):
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT user_id, task_text, deadline 
-                        FROM tasks 
-                        WHERE status='active' 
-                        AND deadline BETWEEN ? AND ?""",
-                     (current_time, ahead_time))
-            return c.fetchall()
-
-    def complete_task(self, task_id, user_id):
-        """Отмечает задачу как выполненной"""
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:00")
-            c.execute("""UPDATE tasks 
-                        SET status = 'completed', 
-                            deadline = ? 
-                        WHERE id = ? AND user_id = ? AND status = 'active'""",
-                     (current_time, task_id, user_id))
-            conn.commit()
-            return c.rowcount > 0
-
-    def delete_task(self, task_id, user_id):
-        """Удаляет задачу"""
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""DELETE FROM tasks 
-                        WHERE id = ? AND user_id = ?""",
-                     (task_id, user_id))
-            conn.commit()
-            return c.rowcount > 0
-
-    def update_task(self, task_id, user_id, **kwargs):
-        """Обновляет параметры задачи"""
-        allowed_fields = {'task_text', 'category', 'deadline', 'priority', 'status', 'reminder_time'}
-        update_fields = {k: v for k, v in kwargs.items() if k in allowed_fields}
+class SingleInstanceBot:
+    def __init__(self):
+        self.lockfile = 'bot.lock'
+        self.lock_fd = None
         
-        if not update_fields:
-            return False
+    def __enter__(self):
+        try:
+            self.lock_fd = open(self.lockfile, 'w')
+            fcntl.lockf(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return self
+        except IOError:
+            if self.lock_fd:
+                self.lock_fd.close()
+            logger.error("Another instance is already running")
+            sys.exit(1)
             
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            query = """UPDATE tasks SET """ + \
-                    ", ".join([f"{field} = ?" for field in update_fields.keys()]) + \
-                    """ WHERE id = ? AND user_id = ?"""
+    def __exit__(self, *args):
+        if self.lock_fd:
+            fcntl.lockf(self.lock_fd, fcntl.LOCK_UN)
+            self.lock_fd.close()
+            try:
+                os.remove(self.lockfile)
+            except OSError:
+                pass
+
+class TelegramBot:
+    def __init__(self):
+        self.bot = telebot.TeleBot(TOKEN, parse_mode='HTML')
+        self.db = Database(DB_FILE)
+        self.user_states = {}
+        self.setup_handlers()
+
+    def get_main_keyboard(self):
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+        buttons = [
+            types.KeyboardButton("📝 Добавить задачу"),
+            types.KeyboardButton("📋 Мои задачи"),
+            types.KeyboardButton("✅ Завершенные задачи")
+        ]
+        markup.add(*buttons)
+        return markup
+
+    def setup_handlers(self):
+        @self.bot.message_handler(commands=['start'])
+        def send_welcome(message):
+            keyboard = self.get_main_keyboard()
+            self.bot.send_message(
+                message.chat.id,
+                "Привет! Я бот-органайзер задач. Помогу тебе управлять твоими делами.",
+                reply_markup=keyboard
+            )
+
+        @self.bot.message_handler(func=lambda message: message.text == "📝 Добавить задачу")
+        def add_task(message):
+            msg = self.bot.send_message(message.chat.id, "Введите текст задачи:")
+            self.user_states[message.from_user.id] = {'state': 'waiting_task_text'}
+            self.bot.register_next_step_handler(msg, self.process_task_text)
+
+        @self.bot.message_handler(func=lambda message: message.text == "📋 Мои задачи")
+        def show_tasks(message):
+            tasks = self.db.get_tasks(message.from_user.id)
+            if tasks:
+                response = "<b>📋 Ваши активные задачи:</b>\n\n"
+                markup = types.InlineKeyboardMarkup()
+                
+                for task in tasks:
+                    task_id, text, category, deadline, priority = task
+                    response += f"<b>🔹 Задача:</b> {text}\n"
+                    response += f"<b>📁 Категория:</b> {category}\n"
+                    response += f"<b>⚡️ Приоритет:</b> {priority}\n"
+                    response += f"<b>⏰ Дедлайн:</b> {deadline}\n"
+                    response += "─────────────────\n"
+                    
+                    markup.add(types.InlineKeyboardButton(
+                        f"✅ Отметить выполненной: {text[:30]}...",
+                        callback_data=f"complete_{task_id}"
+                    ))
+            else:
+                response = "У вас пока нет активных задач."
+                markup = None
             
-            values = list(update_fields.values()) + [task_id, user_id]
-            c.execute(query, values)
-            conn.commit()
-            return c.rowcount > 0
+            self.bot.send_message(
+                message.chat.id,
+                response,
+                parse_mode='HTML',
+                reply_markup=markup
+            )
 
-    def get_task_by_id(self, task_id, user_id):
-        """Получает задачу по ID"""
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT id, task_text, category, deadline, priority, status, reminder_time
-                        FROM tasks 
-                        WHERE id = ? AND user_id = ?""",
-                     (task_id, user_id))
-            return c.fetchone()
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith('complete_'))
+        def complete_task_callback(call):
+            task_id = int(call.data.split('_')[1])
+            if self.db.complete_task(task_id, call.from_user.id):
+                self.bot.answer_callback_query(
+                    call.id,
+                    "✅ Задача отмечена как выполненная!"
+                )
+                self.bot.delete_message(call.message.chat.id, call.message.message_id)
+                show_tasks(call.message)
+            else:
+                self.bot.answer_callback_query(
+                    call.id,
+                    "❌ Ошибка при выполнении задачи"
+                )
 
-    def get_tasks_by_category(self, user_id, category, status='active'):
-        """Получает задачи определенной категории"""
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT id, task_text, category, deadline, priority 
-                        FROM tasks 
-                        WHERE user_id = ? AND category = ? AND status = ?
-                        ORDER BY priority DESC, deadline ASC""",
-                     (user_id, category, status))
-            return c.fetchall()
+        @self.bot.message_handler(func=lambda message: message.text == "✅ Завершенные задачи")
+        def show_completed_tasks(message):
+            tasks = self.db.get_tasks(message.from_user.id, 'completed')
+            if tasks:
+                response = "<b>✅ Завершенные задачи:</b>\n\n"
+                for task in tasks:
+                    task_id, text, category, deadline, priority = task
+                    response += f"<b>✓ Задача:</b> {text}\n"
+                    response += f"<b>📁 Категория:</b> {category}\n"
+                    response += f"<b>📅 Выполнено:</b> {deadline}\n"
+                    response += "─────────────────\n"
+            else:
+                response = "У вас пока нет завершенных задач."
+            
+            self.bot.send_message(
+                message.chat.id,
+                response,
+                parse_mode='HTML',
+                reply_markup=self.get_main_keyboard()
+            )
 
-    def get_tasks_by_priority(self, user_id, priority, status='active'):
-        """Получает задачи определенного приоритета"""
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT id, task_text, category, deadline, priority 
-                        FROM tasks 
-                        WHERE user_id = ? AND priority = ? AND status = ?
-                        ORDER BY deadline ASC""",
-                     (user_id, priority, status))
-            return c.fetchall()
+    def process_task_text(self, message):
+        user_id = message.from_user.id
+        self.user_states[user_id] = {
+            'state': 'waiting_category',
+            'task_text': message.text
+        }
+        
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        categories = ["Работа", "Личное", "Покупки", "Учёба", "Другое"]
+        for category in categories:
+            markup.add(types.KeyboardButton(category))
+        
+        msg = self.bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=markup)
+        self.bot.register_next_step_handler(msg, self.process_category)
 
-    def get_overdue_tasks(self, user_id):
-        """Получает просроченные задачи"""
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:00")
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT id, task_text, category, deadline, priority 
-                        FROM tasks 
-                        WHERE user_id = ? AND status = 'active' AND deadline < ?
-                        ORDER BY deadline ASC""",
-                     (user_id, current_time))
-            return c.fetchall()
+    def process_category(self, message):
+        user_id = message.from_user.id
+        self.user_states[user_id]['category'] = message.text
+        
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        priorities = ["1 - Высокий", "2 - Средний", "3 - Низкий"]
+        for priority in priorities:
+            markup.add(types.KeyboardButton(priority))
+        
+        msg = self.bot.send_message(message.chat.id, "Выберите приоритет:", reply_markup=markup)
+        self.bot.register_next_step_handler(msg, self.process_priority)
 
-    def get_tasks_count(self, user_id, status='active'):
-        """Получает количество задач пользователя"""
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT COUNT(*) 
-                        FROM tasks 
-                        WHERE user_id = ? AND status = ?""",
-                     (user_id, status))
-            return c.fetchone()[0]
+    def process_priority(self, message):
+        user_id = message.from_user.id
+        priority = int(message.text[0])
+        self.user_states[user_id]['priority'] = priority
+        
+        msg = self.bot.send_message(
+            message.chat.id,
+            "Введите дедлайн в формате ДД.ММ.ГГГГ ЧЧ:ММ\nНапример: 31.12.2024 15:00"
+        )
+        self.bot.register_next_step_handler(msg, self.process_deadline)
 
-    def get_categories(self, user_id):
-        """Получает список всех категорий пользователя"""
-        with self.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("""SELECT DISTINCT category 
-                        FROM tasks 
-                        WHERE user_id = ?""",
-                     (user_id,))
-            return [row[0] for row in c.fetchall()]
+    def process_deadline(self, message):
+        user_id = message.from_user.id
+        try:
+            deadline = datetime.datetime.strptime(message.text, "%d.%m.%Y %H:%M")
+            state = self.user_states[user_id]
+            
+            self.db.add_task(
+                user_id=user_id,
+                task_text=state['task_text'],
+                category=state['category'],
+                deadline=deadline.strftime("%Y-%m-%d %H:%M:00"),
+                priority=state['priority']
+            )
+            
+            self.bot.send_message(
+                message.chat.id,
+                "Задача успешно добавлена!",
+                reply_markup=self.get_main_keyboard()
+            )
+            
+        except ValueError:
+            msg = self.bot.send_message(
+                message.chat.id,
+                "Неверный формат даты. Попробуйте еще раз.\nФормат: ДД.ММ.ГГГГ ЧЧ:ММ"
+            )
+            self.bot.register_next_step_handler(msg, self.process_deadline)
+
+    def run(self):
+        logger.info("Starting bot...")
+        self.db.init_db()
+        logger.info("Bot is running...")
+        self.bot.infinity_polling(interval=3)
+
+def main():
+    with SingleInstanceBot():
+        bot = TelegramBot()
+        bot.run()
+
+if __name__ == "__main__":
+    main()

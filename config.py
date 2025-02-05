@@ -1,20 +1,18 @@
 import os
+from dotenv import load_dotenv
 
-# Токен бота
-TOKEN = os.getenv('TELEGRAM_TOKEN')
+load_dotenv()
 
-# Настройки базы данных
+# Telegram Bot Token
+TOKEN = os.getenv('BOT_TOKEN')
+
+# Database
 DB_FILE = 'tasks.db'
 
-# Настройки для повторных попыток подключения
+# Reminder settings
+REMINDER_AHEAD_TIME = 3600  # 1 hour in seconds
+REMINDER_CHECK_INTERVAL = 60  # 1 minute in seconds
+
+# Retry settings
 MAX_RETRIES = 5
-RETRY_DELAY = 5  # секунд
-
-# Таймауты
-POLLING_TIMEOUT = 20
-LONG_POLLING_TIMEOUT = 20
-REQUEST_TIMEOUT = 30
-
-# Настройки для проверки напоминаний
-REMINDER_CHECK_INTERVAL = 300  # 5 минут
-REMINDER_AHEAD_TIME = 3600    # 1 час
+RETRY_DELAY = 5  # seconds
