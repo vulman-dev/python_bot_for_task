@@ -277,12 +277,12 @@ class TelegramBot:
                     task_id, user_id, text, deadline = task
                     deadline_dt = datetime.datetime.strptime(deadline, "%Y-%m-%d %H:%M:00")
                     time_left = deadline_dt - datetime.datetime.now()
-                    hours_left = time_left.total_seconds() / 3600
+                    minutes_left = time_left.total_seconds() / 60
 
                     message = f"⚠️ <b>Напоминание о задаче!</b>\n\n"
                     message += f"<b>Задача:</b> {text}\n"
                     message += f"<b>Дедлайн:</b> {deadline}\n"
-                    message += f"<b>Осталось времени:</b> {int(hours_left)} ч."
+                    message += f"<b>Осталось времени:</b> {int(minutes_left)} мин."
 
                     try:
                         self.bot.send_message(user_id, message, parse_mode='HTML')
@@ -290,7 +290,7 @@ class TelegramBot:
                     except Exception as e:
                         logger.error(f"Error sending reminder: {e}")
 
-                time.sleep(300)  # Проверяем каждые 5 минут
+                time.sleep(30)  # Проверяем каждые 5 минут
             except Exception as e:
                 logger.error(f"Error in reminder check: {e}")
                 time.sleep(60)

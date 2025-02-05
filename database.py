@@ -209,7 +209,7 @@ class Database:
                 AND (reminder_sent IS NULL OR reminder_sent = 0)
             """, (
                 current_time.strftime("%Y-%m-%d %H:%M:00"),
-                (current_time + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:00")
+                (current_time + datetime.timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:00")
             ))
             return c.fetchall()
 
