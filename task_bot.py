@@ -51,7 +51,7 @@ class SingleInstanceBot:
 
 class TelegramBot:
     def __init__(self):
-        self.bot = telebot.TeleBot(TOKEN, threaded=False) 
+        self.bot = telebot.TeleBot(TOKEN, threaded=False, parse_mode=None) 
         self.db = Database(DB_FILE)
         self.user_states = {}
         self.setup_handlers()
@@ -203,7 +203,10 @@ class TelegramBot:
                 
                 # Принудительно очищаем обновления
                 self.bot.remove_webhook()
-                self.bot.get_updates(offset=-1)
+                time.sleep(2)
+                self.bot.delete_webhook()
+                time.sleep(2)
+                self.bot.get_updates(offset=-1, timeout=-1)
 
                 # Запускаем проверку напоминаний
                 reminder_thread = threading.Thread(target=self.check_reminders_loop)
@@ -211,10 +214,7 @@ class TelegramBot:
                 reminder_thread.start()
                 
                 logger.info("Bot is running...")
-                self.bot.polling(none_stop=True, 
-                               timeout=POLLING_TIMEOUT,
-                               long_polling_timeout=LONG_POLLING_TIMEOUT,
-                               allowed_updates=["message", "callback_query"])
+                self.bot.infinity_polling(timeout=60, long_polling_timeout=60)
                 
             except Exception as e:
                 retry_count += 1
