@@ -34,6 +34,15 @@ class Database:
                          status TEXT DEFAULT 'active',
                          reminder_time TEXT)''')
             conn.commit()
+            
+    def add_task(self, user_id, task_text, category, deadline, priority):
+        with self.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("""INSERT INTO tasks 
+                        (user_id, task_text, category, deadline, priority, status) 
+                        VALUES (?, ?, ?, ?, ?, 'active')""",
+                     (user_id, task_text, category, deadline, priority))
+            conn.commit()
 
     def get_upcoming_reminders(self, current_time, ahead_time):
         with self.get_connection() as conn:
