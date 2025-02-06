@@ -308,7 +308,6 @@ class TelegramBot:
                 self.bot.infinity_polling(
                     timeout=90,
                     long_polling_timeout=90,
-                    restart_on_change=True,
                     none_stop=True
                 )
                 retry_count = 0
