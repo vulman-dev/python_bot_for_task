@@ -298,12 +298,36 @@ class TelegramBot:
     def run(self):
         logger.info("Starting bot...")
         self.db.init_db()
-        reminder_thread = threading.Thread(target=self.check_reminders)
-        reminder_thread.daemon = True
-        reminder_thread.start()
 
-        logger.info("Bot is running...")
-        self.bot.infinity_polling()
+        retry_count = 0
+        max_retries = 5
+
+        while True:
+            try:
+                logger.info("Bot polling started")
+                self.bot.infinity_polling(
+                    timeout=90,
+                    long_polling_timeout=90,
+                    restart_on_change=True,
+                    none_stop=True
+                )
+                retry_count = 0
+
+            except ConnectionError as e:
+                retry_count += 1
+                wait_time = min(retry_count * 30, 300)
+                logger.error(f"Connection error (attempt {retry_count}/{max_retries}): {e}")
+                logger.info(f"Waiting {wait_time} seconds before retry...")
+                time.sleep(wait_time)
+                
+                if retry_count >= max_retries:
+                    logger.error("Max retries reached, restarting bot...")
+                    retry_count = 0
+                    
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}")
+                time.sleep(60)
+                continue
 
     def process_edit_text(self, message):
         user_id = message.from_user.id
